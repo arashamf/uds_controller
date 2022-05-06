@@ -18,6 +18,7 @@ uint8_t RTC_ConvertToDec(uint8_t );
 uint8_t RTC_ConvertToBinDec(uint8_t );
 void edit_RTC_data (I2C_HandleTypeDef hi, uint8_t , char * );
 void read_reg_RTC (I2C_HandleTypeDef hi, uint8_t );
+void convert_time (unsigned char , unsigned char * , unsigned char * );
 	
 #ifdef __cplusplus
 }

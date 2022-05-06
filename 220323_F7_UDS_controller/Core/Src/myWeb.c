@@ -8,7 +8,7 @@
 
 extern char UART3_msg_TX [RS232_BUFFER_SIZE];
 
-//********************************************************************************************************************************//
+//******************************************************************************************************************************************************//
 signed short Parse(char *inBuf, PARSE_DATA *output)
 {
 	char *tmp;	
@@ -104,7 +104,7 @@ signed short Parse(char *inBuf, PARSE_DATA *output)
 	return count;
 }	
 
-//********************************************************************************************************************************//
+//******************************************************************************************************************************************************//
 errortype  make_command (errortype count, PARSE_DATA *output, RELEASE_DATA * getsetting)
 {
 
@@ -370,7 +370,7 @@ errortype  make_command (errortype count, PARSE_DATA *output, RELEASE_DATA * get
 		return NoCommand;							// если ничего не подошло
 }
 
-//********************************************************************************************************************************//
+//******************************************************************************************************************************************************//
 void Read_TCP_Message (char *msg_input, 	RELEASE_DATA * getsetting) 
 {	
 	errortype parseRes = -1;
@@ -433,42 +433,21 @@ void Read_TCP_Message (char *msg_input, 	RELEASE_DATA * getsetting)
 //	sprintf(UART3_msg_TX, "%s\r\n", getsetting->answerbuf);
 //	UART3_SendString ((char*)UART3_msg_TX);	
 }
-//********************************************************************************************************************************//
+//***********************************************ф-я конвертации ip-адресса из числовой формы в символьную***********************************************//
 
 void convert_ip (char * mod_ip_adress, unsigned char * ip4_adress)
 {
 		
-	uint8_t buf_ip = 0;
 	char * buffer_ptr = mod_ip_adress;
 	for (uint8_t count = 0; count < 4; count++)
 	{
-		if ((buf_ip = *(ip4_adress + count) / 100) >= 1)
-			*buffer_ptr++ = buf_ip + 0x30;
-		else 
-			*buffer_ptr++ = 0x30;
-		if ((buf_ip = (*(ip4_adress + count) % 100) / 10) >= 1)
-			*buffer_ptr++ = buf_ip + 0x30;
-		else 
-			*buffer_ptr++ = 0x30;
-		if ((buf_ip = *(ip4_adress + count) % 10) >= 1)
-			*buffer_ptr++ = buf_ip + 0x30;
-		else 
-			*buffer_ptr++ = 0x30;
+		*buffer_ptr++ = (*(ip4_adress + count) / 100) + 0x30;
+		*buffer_ptr++ = (*(ip4_adress + count) % 100 / 10) + 0x30;
+		*buffer_ptr++ = (*(ip4_adress + count) % 10 / 1) + 0x30;
 		*buffer_ptr++ = '.';		
 	}
 	
 	*(mod_ip_adress + 15) = '\0';
 }
 
-//********************************************************************************************************************************//
-void convert_time (unsigned char time_size, unsigned char * mod_time_data, unsigned char * time_data)
-{
-		
-	for (size_t count = 0; count < time_size; count++)
-	{
-		*mod_time_data++ = *(time_data + count) / 10;
-		*mod_time_data++ = *(time_data + count) % 10;
-	}
-}
-
-//********************************************************************************************************************************//
+//******************************************************************************************************************************************************//

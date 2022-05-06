@@ -68,17 +68,18 @@ extern uint8_t cell_state [MAX_SELL+1][5];
 extern uint8_t IP_ADDRESS[4]; //установленный ip-адрес в виде четырёх uint8_t (lwip.c)  
 extern char mod_ip_adress [16]; //ip-адрес в символьной форме (например 192.168.001.060) для регистрации и отображения
 
-const char httpHeader[] = "HTTP/1.1 200 OK\nContent-type: text/plain\n\n" ;  // HTTP header
+const char httpHeader[] = "HTTP/1.1 200 OK\nContent-type: text/plain\n\n" ;  // HTTP-заголовок
 
-uint8_t flag_masterkey = 0;
-
+uint8_t flag_masterkey = 0; //флаг срабатывания мастер ключа
+const size_t time_size = 6; //размер буфера для сохранения показателей времени/даты
+	
 typedef struct 
 {
   uint8_t temperature;
-  uint8_t RTC_data [6];
+  uint8_t RTC_data [time_size];
 	} get_RTC_data ; //структура с данными, полученными от микросхемы RTC
 
-char http_send_buffer [400]; //указатель на буффер, в который записывается http-ответ
+char http_send_buffer [400]; //буффер, в который записывается сформированный http-ответ
 
 osTimerId osProgTimerIWDG;  //программный таймер перезагружающий сторожевик
 osTimerId osProgTimerBeeper;  //программный таймер отключающий бипер
@@ -86,10 +87,10 @@ osTimerId osProgTimerMasterKey;  //программный таймер выкл�
 
 osMutexId mutex_RS485_Handle; //мьютекс блокировки передачи команд ячейкам
 
-osMessageQId HTTP_msg_Queue; 
-osMessageQId HTTP_answer_Queue; 
-osMessageQId Cell_msg_Queue;
-osMessageQId Master_Key_Queue; 
+osMessageQId HTTP_msg_Queue; //очередь в которую передаётся указатель на полученный HTTP-запрос
+osMessageQId HTTP_answer_Queue; //очередь в которую передаётся указатель на сформированный HTTP-ответ
+osMessageQId Cell_msg_Queue; //очередь в которую передаётся код команды ячейкам
+osMessageQId Master_Key_Queue; //очередь в которую передаётся команды управления ячейками по результатам обработки состояния мастер-ключа
 osMessageQId Ip_adress_Queue;
 osMessageQId RTC_typedata_Queue;
 osMessageQId RS485_msg_Queue;
@@ -193,25 +194,25 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_QUEUES */
   osMessageQDef (HTTP_msg_Queuename, 3, uint8_t *);
-	HTTP_msg_Queue = osMessageCreate (osMessageQ (HTTP_msg_Queuename), NULL); //передача указателя на полученное http сообщение
+	HTTP_msg_Queue = osMessageCreate (osMessageQ (HTTP_msg_Queuename), NULL); ///очередь для передачи указателя на полученное http-сообщение
 	
 	osMessageQDef (HTTP_answer_Queuename, 4, uint8_t *); 
-	HTTP_answer_Queue = osMessageCreate (osMessageQ (HTTP_answer_Queuename), NULL); //передача указателя на сформированное http сообщение
+	HTTP_answer_Queue = osMessageCreate (osMessageQ (HTTP_answer_Queuename), NULL); ///очередь для передачи указателя на сформированное http-сообщение
  
 	osMessageQDef (Cell_msg_Queuename, 2, uint16_t); 
-	Cell_msg_Queue = osMessageCreate (osMessageQ (Cell_msg_Queuename), NULL); //создание очереди для команд управления ячейками
+	Cell_msg_Queue = osMessageCreate (osMessageQ (Cell_msg_Queuename), NULL); //очередь для кода команды управления ячейками
 	
 	osMessageQDef (Master_Key_Queuename, 1, uint8_t); 
-	Master_Key_Queue = osMessageCreate (osMessageQ (Master_Key_Queuename), NULL); //создание очереди для команд управления ячейками от мастерключа
+	Master_Key_Queue = osMessageCreate (osMessageQ (Master_Key_Queuename), NULL); //очередь для команд управления ячейками от мастерключа
 
 	osMessageQDef (Ip_adress_Queuename, 2, uint8_t *);
-	Ip_adress_Queue = osMessageCreate (osMessageQ (Ip_adress_Queuename), NULL); //очередь передачи полученного ip-адреса
+	Ip_adress_Queue = osMessageCreate (osMessageQ (Ip_adress_Queuename), NULL); //очередь для передачи полученного ip-адреса
 
 	osMessageQDef(RTC_typedata_Queuename, 2, uint8_t);
-	RTC_typedata_Queue = osMessageCreate (osMessageQ (RTC_typedata_Queuename), NULL); //очередь передачи типа запрашиваемых RTC данных
+	RTC_typedata_Queue = osMessageCreate (osMessageQ (RTC_typedata_Queuename), NULL); //очередь для передачи типа запрашиваемых RTC данных
 	
 	osMessageQDef (RS485_msg_Queuename, 2, uint8_t *);
-	RS485_msg_Queue = osMessageCreate (osMessageQ (RS485_msg_Queuename), NULL); //очередь передачи полученного ip-адреса
+	RS485_msg_Queue = osMessageCreate (osMessageQ (RS485_msg_Queuename), NULL); //очередь для передачи полученного по RS-485 сообщения
 	
   /* USER CODE END RTOS_QUEUES */
 
@@ -253,6 +254,7 @@ void MX_FREERTOS_Init(void) {
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
+//************************************************открытие и прослушивание tcp-соединения************************************************//
 /**
   * @brief  Function implementing the defaultTask thread.
   * @param  argument: Not used
@@ -292,13 +294,11 @@ void StartDefaultTask(void const * argument)
 			{
 				if ((err = netconn_accept(conn, &newconn)) == ERR_OK) //разрешение на приём нового tcp-соединения в сети прослушивания
 				{	
-					if ((rcv_err = netconn_recv(newconn, &inbuffer)) == ERR_OK)
+					if ((rcv_err = netconn_recv(newconn, &inbuffer)) == ERR_OK) //если tcp-сообщение принято без ошибок
 					{
 //					osTimerStart(osProgTimerBeeper, 250); 
 //					HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4); //писк бипером
 						netbuf_data(inbuffer, (void**)&ptr_http_msg, &len); //копирование полученного http-сообщения
-//					sprintf (UART3_msg_TX,"%s\r\n", buf);
-//					UART3_SendString ((char*)UART3_msg_TX);	
 						osMessagePut (HTTP_msg_Queue, (uint32_t)ptr_http_msg, 10); //передача в очередь указателя на полученное http-сообщение
 						event = osMessageGet(HTTP_answer_Queue, 100); //ожидание появления данных в очереди
 						if (event.status == osEventMessage) //если данные для ответного http-сообщения появились в очереди
@@ -311,8 +311,7 @@ void StartDefaultTask(void const * argument)
 					}
 					netbuf_delete(inbuffer); //очистка входного буффера		
 					netconn_close(newconn); //закрытие соединения
-					netconn_delete(newconn); //очистка соединения	
-										
+					netconn_delete(newconn); //очистка соединения											
 				}
 				osDelay(10);  
 			}                                     
@@ -334,7 +333,7 @@ void StartDefaultTask(void const * argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-/********************************************мигание светодиодом****************************************************************/
+//************************************************мигание светодиодом************************************************//
 void Switch_Led (void const * argument)
 {
 	for(;;)
@@ -346,7 +345,7 @@ void Switch_Led (void const * argument)
 	}
 }
 
-/**************************парсинг полученног tcp-сообщения и передача данных специализированной задаче*****************************/
+//************************************************парсинг tcp-сообщения и передача полученных данных другим задачам************************************************//
 void Parse_HTTP_msg (void const * argument)
 {
 	char * http_get_data; //полученный код команды из очереди
@@ -378,27 +377,27 @@ void Parse_HTTP_msg (void const * argument)
 						switch (buf)
 						{
 							case 1: //если запрос времени и даты								
-								osMessagePut (RTC_typedata_Queue, (uint32_t)buf, 10); //передача команды запроса времени/температуры таску RTC_get_time
+								osMessagePut (RTC_typedata_Queue, (uint32_t)buf, 10); //передача команды запроса времени/температуры задаче RTC_get_time
 								break;
 							
 							case 2: //если запрос температуры
-								osMessagePut (RTC_typedata_Queue, (uint32_t)buf, 10); //передача команды запроса времени/температуры таску RTC_get_time
+								osMessagePut (RTC_typedata_Queue, (uint32_t)buf, 10); //передача команды запроса времени/температуры задаче RTC_get_time
 								break;
 							
 							case 3: //если установка времени
 								SetTime (RTC_ADDRESS,  0x0, ptr_data->RTC_setting);		
 								buf = 1;
-								osMessagePut (RTC_typedata_Queue, (uint32_t)buf, 10);
+								osMessagePut (RTC_typedata_Queue, (uint32_t)buf, 10); //передача команды запроса времени/температуры задаче RTC_get_time
 								break;		
 							
 							case 4: //если установка даты
 								SetTime (RTC_ADDRESS,  0x4, ptr_data->RTC_setting);	
 								buf = 1;
-								osMessagePut (RTC_typedata_Queue, (uint32_t)buf, 10);
+								osMessagePut (RTC_typedata_Queue, (uint32_t)buf, 10); //передача команды запроса времени/температуры задаче RTC_get_time
 								break;	
 							
 							case 5: //если установка ip-адреса 
-								osMessagePut(Ip_adress_Queue, (uint32_t)ptr_data->new_ipadress, 10); //передача команды установки ip-адреса таску Set_New_IP
+								osMessagePut(Ip_adress_Queue, (uint32_t)ptr_data->new_ipadress, 10); //передача полученного для установке ip-адреса задаче Set_New_IP
 								break;
 								
 							default:
@@ -407,14 +406,14 @@ void Parse_HTTP_msg (void const * argument)
 					}
 				}
 			}	
-			else //потготовка ответа при ошибке парсинга
+			else //подготовка ответа при некорректном запросе
 			{
 				tmp=strchr(ptr_data->answerbuf,'&');				// поиск первого символа '&'
 				if(tmp != 0)
 				{
 					tmp = tmp+1; //сдвиг указателя на один символ влево от '&'
 					sprintf (http_send_buffer, "stoika=%s_result&%s\r\n", mod_ip_adress, tmp); //формирования сообщения
-					osMessagePut (HTTP_answer_Queue, (uint32_t)http_send_buffer, 10); //закидывания сообщения в очередь
+					osMessagePut (HTTP_answer_Queue, (uint32_t)http_send_buffer, 10); //указатель на ответное http-сообщение в очередь для задачи StartDefaultTask
 				}
 				else
 				{
@@ -426,7 +425,7 @@ void Parse_HTTP_msg (void const * argument)
 	}
 }
 
-/*******************************задачи формирования команды по результатам парсинга tcp-сообщений************************************/
+//************************************************формирование команды для ячеек по результатам парсинга tcp-сообщения************************************************//
 void Parsing_Cell_command (void const * argument)
 {
 	osEvent event1, event2;
@@ -440,7 +439,6 @@ void Parsing_Cell_command (void const * argument)
 	uint8_t * ptr_RS485_buffer; //указатель на принятое сообщение по RS-485 (UART1_msg_RX [6])
 	
 	RS485_TXbuffer [0] = 0x2; //1 байт при передаче от контроллера к ячейки всегда равен числу 2
-//	char * ptr_RS485_msg;
 	
   for(;;)
   {
@@ -496,7 +494,7 @@ void Parsing_Cell_command (void const * argument)
 				switch (typecommand)
 				{
 					case 0: //если запрос типа close ячейки
-						sprintf (http_send_buffer,"stoika=%s&close_port=%c%c%c&result=accepted", mod_ip_adress, adress_cell[0], adress_cell[1], adress_cell[2]);
+						sprintf (http_send_buffer,"stoika=%s&close_port=%s&result=accepted", mod_ip_adress, adress_cell);
 						event2 = osMessageGet(RS485_msg_Queue, 4); //ожидание появления данных в очереди
 					if (event2.status == osEventMessage) //если данные появились в очереди (ответ на команду close, сейчас я их не использую)
 						{	
@@ -506,7 +504,7 @@ void Parsing_Cell_command (void const * argument)
 						break;
 				
 					case 1: //если запрос типа open ячейки
-						sprintf (http_send_buffer,"stoika=%s&open_port=%c%c%c&result=accepted", mod_ip_adress, adress_cell[0], adress_cell[1], adress_cell[2]);
+						sprintf (http_send_buffer,"stoika=%s&open_port=%s&result=accepted", mod_ip_adress, adress_cell);
 						event2 = osMessageGet(RS485_msg_Queue, 4); //ожидание появления данных в очереди
 						if (event2.status == osEventMessage) //если данные появились в очереди (ответ на команду open, сейчас я их не использую)
 						{	
@@ -520,13 +518,13 @@ void Parsing_Cell_command (void const * argument)
 						ptr_RS485_buffer = &cell_state [number_cell-1][0];	//указатель на массив с данными состояния ячеек		
 						if (*ptr_RS485_buffer != 0) //если есть данные от ячейки
 						{	
-							sprintf  (tmp_buffer, "&cell_%c%c=%c,%c,%c,%c,%c", adress_cell[1], adress_cell[2], *ptr_RS485_buffer, *(ptr_RS485_buffer + 1), *(ptr_RS485_buffer + 2), *(ptr_RS485_buffer + 3), *(ptr_RS485_buffer + 4));	
+							sprintf  (tmp_buffer, "&cell_%s=%c,%c,%c,%c,%c", adress_cell, *ptr_RS485_buffer, *(ptr_RS485_buffer + 1), *(ptr_RS485_buffer + 2), *(ptr_RS485_buffer + 3), *(ptr_RS485_buffer + 4));	
 							strcat (http_send_buffer, tmp_buffer);
 							osMessagePut (HTTP_answer_Queue, (uint32_t)http_send_buffer, 10); //передача в очередь указателя на полученное сообщение
 						}
 						else	 //если не получен ответ от ячейки
 						{ 
-							sprintf (tmp_buffer, "&cell_%c%c=no", adress_cell[1], adress_cell[2]);
+							sprintf (tmp_buffer, "&cell_%s=no", adress_cell);
 							strcat (http_send_buffer, tmp_buffer);
 							osMessagePut (HTTP_answer_Queue, (uint32_t)http_send_buffer, 10); //передача в очередь указателя на полученное сообщение
 						}
@@ -541,7 +539,7 @@ void Parsing_Cell_command (void const * argument)
 	}
 }
 
-/**********************************************************************************************************************************/
+//************************************************периодическая отправка всем ячейкам запроса типа state************************************************//
 void Ping_All_Sell (void const * argument)
 {
 	osEvent event; 
@@ -576,7 +574,7 @@ void Ping_All_Sell (void const * argument)
 	}
 }
 
-/************************************************чтение микриков 14 ячейки********************************************************/
+/************************************************чтение микриков 14 ячейки************************************************/
 void Read_Keys_MasterCell (void const * argument)
 {
 	cell_state [MAX_SELL][4] = cell_state [MAX_SELL][0] = '0'; //обнуление 0 и 4 бита мастер-ячейки 
@@ -593,12 +591,15 @@ void Read_Keys_MasterCell (void const * argument)
 			{
 				for (size_t count = 3; count <= 5; count++)
 				{
-					cell_state [MAX_SELL][count - 2] = (((status_inputs >> count) & 0x1) + 0x30); //сохраним состояние ключей в буффер
+					if (((status_inputs >> count) & 0x1) == 0x0) //если считанный бит равен 0, (контакт замкнут)
+						cell_state [MAX_SELL][count - 2] = '1'; //сохраним 1 в буффер состояния ключей
+					else
+						cell_state [MAX_SELL][count - 2] = '0';
 					if (count == 5)  //если это бит состояния мастер ключа
 					{
 						if (MasterKeyStatus != cell_state [MAX_SELL][count - 2]) //если состояние мк изменилось
 						{
-							if (cell_state [MAX_SELL][count - 2] ==  '0') //если мастер-ключ был переведён в положение включено
+							if (cell_state [MAX_SELL][count - 2] ==  '1') //если мастер-ключ был переведён в положение включено
 							{
 								if (flag_masterkey == 0) //если мастер-ключ не был до этого момента нажат
 								{	
@@ -609,7 +610,7 @@ void Read_Keys_MasterCell (void const * argument)
 							}
 							else 
 							{
-								if (cell_state [MAX_SELL][count - 2] ==  '1') //если мастер-ключ был переведён в положение выключено cell_state [MAX_SELL][2] ==  '1'
+								if (cell_state [MAX_SELL][count - 2] == '0') //если мастер-ключ был переведён в положение выключено 
 								{
 									if (flag_masterkey == 1) //если мастер-ключ был до этого момента нажат (flag_masterkey == 1)
 									{
@@ -635,7 +636,7 @@ void Read_Keys_MasterCell (void const * argument)
 	}
 }
 
-/************************************************отправка команды open ячейкам********************************************************/
+/************************************************отправка ячейкам команды типа open************************************************/
 void MasterCell_Switcher (void const * argument)
 {
 	osEvent event; 
@@ -651,8 +652,6 @@ void MasterCell_Switcher (void const * argument)
 			{
 				osTimerStop (osProgTimerMasterKey); //остановка таймера на выключение соленоидов
 				flag_masterkey = 0;
-//				sprintf (UART3_msg_TX , "mskey=%u, flag_mskey=%u\r\n", typecommand, flag_masterkey);
-//				UART3_SendString (UART3_msg_TX);
 				LED_GREEN (0);
 			}
 			else //если была отправлена команда на включение соленоидов
@@ -666,18 +665,19 @@ void MasterCell_Switcher (void const * argument)
 
 
 
-/************************************************запрос времени/температуры********************************************************/
+/************************************************запрос времени/температуры************************************************/
 void RTC_get_time (void const * argument)
 { 
 	osEvent event;
 	uint8_t reg_adr; //адрес начального регистра с данными времени
 	uint8_t type_RTC_data = 0; 
-	get_RTC_data Time_Data;
-	get_RTC_data * ptr_RTC_data = &Time_Data;
+	get_RTC_data Time_Data; //инициализация структуры с данными времени и температуры
+	get_RTC_data * ptr_RTC_data = &Time_Data; //инициализация указателя на массив с данными времени в числовом виде
+	uint8_t time_array [time_size*2] = {0}; //массив с данными времени в символьном виде
 	
 	for (;;) 
 	{
-		event = osMessageGet(RTC_typedata_Queue, 70); //ожидание появления данных в очереди
+		event = osMessageGet(RTC_typedata_Queue, 50); //ожидание появления данных в очереди
 		if (event.status == osEventMessage) //если данные появились в очереди
 		{
 			type_RTC_data = (uint8_t)event.value.v;
@@ -690,8 +690,10 @@ void RTC_get_time (void const * argument)
 				
 			if (type_RTC_data == 1) //если запрос времени и даты
 			{
-				sprintf (http_send_buffer, "stoika=%s&rtcr=_%u/%u/%u_%u:%u:%u\r\n", mod_ip_adress, *(ptr_RTC_data -> RTC_data+3), *(ptr_RTC_data -> RTC_data+4), *(ptr_RTC_data -> RTC_data+5),
-				*(ptr_RTC_data -> RTC_data+2), *(ptr_RTC_data -> RTC_data+1), *(ptr_RTC_data -> RTC_data));
+				convert_time (time_size, time_array, ptr_RTC_data -> RTC_data);
+				sprintf (http_send_buffer, "stoika=%s&rtcr=_%c%c/%c%c/%c%c_%c%c:%c%c:%c%c\r\n", mod_ip_adress, time_array [6], time_array [7], time_array [8], time_array [9], 
+				time_array [10], time_array [11], time_array [4], time_array [5], time_array [2], time_array [3], time_array [0], time_array [1]);
+				UART3_SendString ((char*)http_send_buffer);	
 				osMessagePut (HTTP_answer_Queue, (uint32_t)http_send_buffer, 10); //передача в очередь указателя на полученное сообщение
 			}
 			else
@@ -707,7 +709,7 @@ void RTC_get_time (void const * argument)
 	}
 }
 
-/************************************************установка ip-адреса***************************************************************/
+/************************************************установка ip-адреса************************************************/
 void Set_New_IP (void const * argument)
 {
 	uint8_t * getip;
@@ -731,14 +733,13 @@ void Set_New_IP (void const * argument)
 	}
 }
 
-/*****************************************************вывод данных на LCD-дисплей*********************************************************************/
+/************************************************вывод данных на LCD-дисплей************************************************/
 void Show_LCD (void const * argument)
 { 
 
 	uint32_t tickcount = osKernelSysTick();
-	const size_t time_size = 6;
-	uint8_t time [time_size]; //массив с неконвертированными данными времени (двоично-десятичные)
-	uint8_t time_array [time_size*2] = {0}; //массив с конвертированными данными времени 
+	uint8_t time [time_size]; //массив с данными времени в числовом виде 
+	uint8_t time_array [time_size*2] = {0}; //массив с данными времени в символьном виде
 	char led_buffer [15]; //буффер с конвертированными данными времени в строковом отображении
 	
 	uint8_t dimension = 2; //междустрочное растояние
@@ -752,12 +753,13 @@ void Show_LCD (void const * argument)
 	{
 		GetTime (RTC_ADDRESS,  FIRST_RTC_REGISTR_TIME, time_size/2, time); //чтение регистров 0х0-0х2 со значениями времени (с:м:ч)
 		GetTime (RTC_ADDRESS,  FIRST_RTC_REGISTR_DATE, time_size/2, &time[time_size/2]); //чтение регистров 0х4-0х6 со значениями даты (д:м:г)
-		convert_time (time_size, time_array, time);
+		convert_time (time_size, time_array, time); //конвертация данных времени в символьный вид
 		ClearLcdMemory();
 		
 		LCD_SetFont(Arial_15x17, black);
-		LCD_ShowString(30, dimension , mod_ip_adress);
-		sprintf (led_buffer, "%u%u.%u%u.%u%u  %u%u:%u%u:%u%u",  time_array[6],  time_array[7], time_array[8],  time_array[9], time_array[10],  time_array[11],  time_array[4], time_array[5],  time_array[2], time_array[3],  time_array[0], time_array[1]);
+		LCD_ShowString(2, dimension , mod_ip_adress);
+		sprintf (led_buffer, "%c%c.%c%c.%c%c %c%c:%c%c:%c%c",  time_array[6],  time_array[7], time_array[8],  time_array[9], time_array[10],  
+		time_array[11],  time_array[4], time_array[5],  time_array[2], time_array[3],  time_array[0], time_array[1]);
 		LCD_ShowString(15, (dimension += 14), led_buffer);	
 		
 		for (size_t count = 0; count <= MAX_SELL; count++) //опрос ячеек
@@ -771,14 +773,14 @@ void Show_LCD (void const * argument)
 				if ((count+1)%2) //если номер ячейки нечётный (1, 3, 5 ... 13)
 				{	
 					if (*(ptr_RS485_buffer) != 0)
-						sprintf  (led_buffer, "%c%c=%c,%c,%c,%c,%c", adress_cell[0], adress_cell[1], *(ptr_RS485_buffer), *(ptr_RS485_buffer+1), *(ptr_RS485_buffer+2), *(ptr_RS485_buffer+3),  *(ptr_RS485_buffer+4));
+						sprintf  (led_buffer, "%s=%c,%c,%c,%c,%c", adress_cell, *(ptr_RS485_buffer), *(ptr_RS485_buffer+1), *(ptr_RS485_buffer+2), *(ptr_RS485_buffer+3),  *(ptr_RS485_buffer+4));
 					else
 						sprintf (led_buffer, "%c%c=no_data", adress_cell[0], adress_cell[1]);
 				}
 				else //если номер ячейки чётный (2, 4 ... 12)
 				{
 					if (*(ptr_RS485_buffer) != 0)				
-						sprintf (tmp_buffer, " %c%c=%c,%c,%c,%c,%c", adress_cell[0], adress_cell[1], *(ptr_RS485_buffer), *(ptr_RS485_buffer+1), *(ptr_RS485_buffer+2), *(ptr_RS485_buffer+3),  *(ptr_RS485_buffer+4));
+						sprintf (tmp_buffer, " %s=%c,%c,%c,%c,%c", adress_cell, *(ptr_RS485_buffer), *(ptr_RS485_buffer+1), *(ptr_RS485_buffer+2), *(ptr_RS485_buffer+3),  *(ptr_RS485_buffer+4));
 					else
 						sprintf (tmp_buffer, " %c%c=no_data", adress_cell[0], adress_cell[1]);
 					strcat (led_buffer, tmp_buffer); //объединение буфферов двух ячеек в один
@@ -806,24 +808,24 @@ void Show_LCD (void const * argument)
 	}
 } 
 
-/**********************************************************************************************************************************/
+/************************************************************************************************/
 void ProgTimerIWDGCallback(void const *argument)
 {
-	HAL_IWDG_Refresh(&hiwdg); //перезагружаем iwdg
+	HAL_IWDG_Refresh(&hiwdg); //перезагрузка iwdg
 }
 
-/**********************************************************************************************************************************/
+/************************************************************************************************/
 void ProgTimerBeeperCallback(void const *argument)
 {
-	HAL_TIM_PWM_Stop (&htim4, TIM_CHANNEL_4); //отключение бипера
+	HAL_TIM_PWM_Stop (&htim4, TIM_CHANNEL_4); //выключение бипера
 }
 
-/**********************************************************************************************************************************/
+/************************************************************************************************/
 void ProgTimerMasterKeyCallback (void const *argument)
 {
-	osMessagePut (Master_Key_Queue, 0, 10); //передача в очередь команды на выключение соленоидов(0)
+	osMessagePut (Master_Key_Queue, 0, 10); //передача в очередь команды ячейкам на выключение всех соленоидов(0)
 }
-/**********************************************************************************************************************************/
+/************************************************************************************************/
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

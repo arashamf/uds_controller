@@ -85,6 +85,12 @@ void Error_Handler(void);
 #define RXD_GPIO_Port GPIOA
 #define SDMMC_CD_Pin GPIO_PIN_0
 #define SDMMC_CD_GPIO_Port GPIOD
+#define BUTTON_3_Pin GPIO_PIN_3
+#define BUTTON_3_GPIO_Port GPIOD
+#define BUTTON_2_Pin GPIO_PIN_4
+#define BUTTON_2_GPIO_Port GPIOD
+#define BUTTON_1_Pin GPIO_PIN_5
+#define BUTTON_1_GPIO_Port GPIOD
 #define LCD_A0_Pin GPIO_PIN_7
 #define LCD_A0_GPIO_Port GPIOD
 #define LCD_RESET_Pin GPIO_PIN_4

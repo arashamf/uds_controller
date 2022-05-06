@@ -7,7 +7,7 @@
 */
 /**************************************************************************/
 #include "st7735.h"
-//#include "delay.h"	
+#include "delay.h"	
 #include "stdio.h"
 #include "string.h"
 #include "font7x15.h"
@@ -429,7 +429,7 @@ uint32_t LCD_FastShowChar(uint32_t x,uint32_t y,uint8_t num)
 	uint32_t tmpMaxWidth = 0, maxWidth = 0;
 	uint32_t symbolHeight, symbolLeghth, symbolByteWidth;
 	 
-    if(x>ST7735_PANEL_WIDTH||y>ST7735_PANEL_HEIGHT)return 0;
+   if(x>ST7735_PANEL_WIDTH||y>ST7735_PANEL_HEIGHT)return 0;
 
 	if (num == ' ') { return 10; }		  	// special case - " " symbol doesn't have any width
 	if (num < ' ') return 0;	            					

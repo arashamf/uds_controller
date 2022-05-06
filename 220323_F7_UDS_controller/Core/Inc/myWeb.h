@@ -47,5 +47,4 @@ errortype ParseTCP (char *, PARSE_DATA *);
 errortype make_command (errortype, PARSE_DATA *, RELEASE_DATA*);
 void Read_TCP_Message (char *, RELEASE_DATA *);
 void convert_ip (char * , unsigned char * );
-void convert_time (unsigned char time_size, unsigned char * mod_time_data, unsigned char * time_data);
 #endif

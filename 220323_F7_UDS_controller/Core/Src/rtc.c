@@ -4,7 +4,7 @@
 extern char UART3_msg_TX [RS232_BUFFER_SIZE]; //буффер для передачи сообщений по UART3
 extern char RS485_RXbuffer [RX_BUFFER_SIZE];; //буффер для приёма сообщений по UART3
 
-//********************************************************************************************************************************//
+//******************************************************************************************************************************************************//
 void GetTime (uint8_t RTC_adress, uint8_t registr_adress, uint8_t sizebuf, uint8_t * RTC_buffer)
 {
 
@@ -18,10 +18,9 @@ void GetTime (uint8_t RTC_adress, uint8_t registr_adress, uint8_t sizebuf, uint8
 		}
 	}
 	
-	while(HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY){} //ожидание готовности приёма
+	while(HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY){} //ожидание готовности приёма		
 		
-		//запись показателей времени	
-	while (HAL_I2C_Master_Receive (&hi2c1, (uint16_t) RTC_adress, (uint8_t*)RTC_buffer, (uint16_t) sizebuf, (uint32_t)0xFFFF)!=HAL_OK)
+	while (HAL_I2C_Master_Receive (&hi2c1, (uint16_t) RTC_adress, (uint8_t*)RTC_buffer, (uint16_t) sizebuf, (uint32_t)0xFFFF)!=HAL_OK) //запись показателей времени	
 	{
 		if(HAL_I2C_GetError(&hi2c1)!=HAL_I2C_ERROR_AF)
 		{
@@ -30,16 +29,15 @@ void GetTime (uint8_t RTC_adress, uint8_t registr_adress, uint8_t sizebuf, uint8
 			return;
 		}
 	}
-
-	//перевод числа из двоично-десятичного представления  в обычное
+	
 	for (uint8_t count = 0; count < sizebuf; count++)
 	{
-		*RTC_buffer = RTC_ConvertToDec(*RTC_buffer);
+		*RTC_buffer = RTC_ConvertToDec(*RTC_buffer); //перевод числа из двоично-десятичного представления  в обычное
 		RTC_buffer++;
 	}
 }
 
-//********************************************************************************************************************************//
+//******************************************************************************************************************************************************//
 void GetTemp (uint8_t  RTC_adress, uint8_t registr_adress,  uint8_t * temp_buffer)
 {
 	
@@ -54,7 +52,6 @@ void GetTemp (uint8_t  RTC_adress, uint8_t registr_adress,  uint8_t * temp_buffe
 	
 	while(HAL_I2C_GetState(&hi2c1) != HAL_I2C_STATE_READY){} //ожидание готовности приёма
 		
-
 	while (HAL_I2C_Master_Receive (&hi2c1, (uint16_t) RTC_adress, temp_buffer, 1, (uint32_t)0xFFFF)!=HAL_OK)
 	{
 		if(HAL_I2C_GetError(&hi2c1)!=HAL_I2C_ERROR_AF)
@@ -65,7 +62,7 @@ void GetTemp (uint8_t  RTC_adress, uint8_t registr_adress,  uint8_t * temp_buffe
 	}
 }
 
-//********************************************************************************************************************************//
+//******************************************************************************************************************************************************//
 void SetTime (uint8_t RTC_adress, uint8_t registr_adress, char *time)
 {
 	//формирование сообщения для RTC	
@@ -86,8 +83,8 @@ void SetTime (uint8_t RTC_adress, uint8_t registr_adress, char *time)
 		}
 	}
 	I2C_RTC_buffer [0] = registr_adress; //в первый элемент массива - адрес регистра RTC	
-	//отправка данных
-	while(HAL_I2C_Master_Transmit(&hi2c1, (uint16_t) RTC_adress, (uint8_t*)ptr_RTC_buffer, 4, (uint32_t)0xFFFF)!= HAL_OK)
+	
+	while(HAL_I2C_Master_Transmit(&hi2c1, (uint16_t) RTC_adress, (uint8_t*)ptr_RTC_buffer, 4, (uint32_t)0xFFFF)!= HAL_OK) //отправка данных
   {
 		if (HAL_I2C_GetError(&hi2c1) != HAL_I2C_ERROR_AF)
 		{
@@ -112,7 +109,7 @@ uint8_t RTC_ConvertToBinDec(uint8_t digit)
 }
 
 
-//********************************************************************************************************************************//
+//******************************************************************************************************************************************************//
 void read_reg_RTC (I2C_HandleTypeDef hi, uint8_t adress)
 {
 	uint8_t reg_adr = 0x2; //адрес регистра RTC 
@@ -147,7 +144,7 @@ void read_reg_RTC (I2C_HandleTypeDef hi, uint8_t adress)
 	HAL_UART_Transmit (&huart3, (uint8_t*)"\r\n", strlen("\r\n"), 0xFFFF);
 }
 
-//********************************************************************************************************************************//
+//******************************************************************************************************************************************************//
 void edit_RTC_data (I2C_HandleTypeDef hi, uint8_t adress,  char * time)
 {	
 	char *ptr;	
@@ -209,11 +206,11 @@ void edit_RTC_data (I2C_HandleTypeDef hi, uint8_t adress,  char * time)
 	}			
 	if (errflag == 1)
 	{
-//		sprintf (UART3_msg_TX , "data_ok\r\n");	
-//		UART3_SendString (UART3_msg_TX);
-	//	SetTime (hi, adress, time); //отправка данных времени на мк RTC
-//		sprintf (wtext, "%u:%u:%u set time\r\n", RTC_ConvertToDec (I2C_RTC_buffer [3]),RTC_ConvertToDec (I2C_RTC_buffer [2]), RTC_ConvertToDec (I2C_RTC_buffer [1]));
-//		write_reg (&logfile , wtext);
+		/*sprintf (UART3_msg_TX , "data_ok\r\n");	
+		UART3_SendString (UART3_msg_TX);
+		SetTime (hi, adress, time); //отправка данных времени на мк RTC
+		sprintf (wtext, "%u:%u:%u set time\r\n", RTC_ConvertToDec (I2C_RTC_buffer [3]),RTC_ConvertToDec (I2C_RTC_buffer [2]), RTC_ConvertToDec (I2C_RTC_buffer [1]));
+		write_reg (&logfile , wtext);*/
 	}
 	else
 	{
@@ -221,4 +218,15 @@ void edit_RTC_data (I2C_HandleTypeDef hi, uint8_t adress,  char * time)
 		UART3_SendString (UART3_msg_TX);
 	}
 }
-//********************************************************************************************************************************//
+
+//******************************************************************************************************************************************************//
+void convert_time (unsigned char time_size, unsigned char * mod_time_data, unsigned char * time_data)
+{
+		
+	for (size_t count = 0; count < time_size; count++)
+	{
+		*mod_time_data++ = (*(time_data + count) / 10) + 0x30;
+		*mod_time_data++ = (*(time_data + count) % 10) + 0x30;
+	}
+}
+//******************************************************************************************************************************************************//
