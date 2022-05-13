@@ -69,6 +69,10 @@ void Error_Handler(void);
 #define MASTER_KEY_GPIO_Port GPIOE
 #define E_RES_Pin GPIO_PIN_3
 #define E_RES_GPIO_Port GPIOA
+#define CS2_Pin GPIO_PIN_10
+#define CS2_GPIO_Port GPIOE
+#define CS1_Pin GPIO_PIN_11
+#define CS1_GPIO_Port GPIOE
 #define EN12V_Pin GPIO_PIN_12
 #define EN12V_GPIO_Port GPIOD
 #define LED_R_Pin GPIO_PIN_13

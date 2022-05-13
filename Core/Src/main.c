@@ -38,6 +38,7 @@
 #include "stdio.h"
 #include "string.h"
 #include "flash_memory.h"
+#include "flash_W25M02.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -72,6 +73,9 @@ void MX_FREERTOS_Init(void);
 char UART3_msg_TX [RS232_BUFFER_SIZE];
 char RS485_RXbuffer [RX_BUFFER_SIZE] = {0};
 char RS485_TXbuffer [4];
+
+uint8_t flash_rx_buf[20] = {0};
+uint8_t flash_tx_buf[10];
 
 uint8_t cell_state [MAX_SELL+1][5] = {0}; //массив с данными от ячеек
 char mod_ip_adress [16]; //ip-адрес в символьной форме (например 192.168.001.060) для регистрации и отображения
@@ -122,8 +126,10 @@ int main(void)
   MX_IWDG_Init();
   MX_SPI3_Init();
   MX_TIM4_Init();
+  MX_SPI4_Init();
   /* USER CODE BEGIN 2 */
-	
+	SPI4_CS1_OFF;
+	SPI4_CS2_OFF;
 	
 	lcdInit();
 	ClearLcdMemory();
@@ -137,17 +143,26 @@ int main(void)
 	ENABLE_SD_CARD;	
 	
 	if (READ_BIT (RCC->CSR, RCC_CSR_IWDGRSTF)) //если установлен бит IWDGRST (флаг срабатывания IWDG)
-  {
+	{
 		SET_BIT (RCC->CSR, RCC_CSR_RMVF); //сброс флага срабатывания IWDG
-  	sprintf (UART3_msg_TX,"UDS_controller_start_after_iwdg_reset\r\n");
-  	UART3_SendString ((char*)UART3_msg_TX);	
-  }
-  else
-  {
-  	sprintf (UART3_msg_TX,"UDS_controller_start\r\n");
+		sprintf (UART3_msg_TX,"UDS_controller_start_after_iwdg_reset\r\n");
 		UART3_SendString ((char*)UART3_msg_TX);	
-  }
+	}
+	else
+	{
+		sprintf (UART3_msg_TX,"UDS_controller_start\r\n");
+		UART3_SendString ((char*)UART3_msg_TX);	
+	}
 	
+	Reset_W25M ();
+	
+	ReadID_W25M (flash_rx_buf);
+	sprintf (UART3_msg_TX,"ID=%x %x %x %x %x %x\r\n", *(flash_rx_buf), *(flash_rx_buf+1), *(flash_rx_buf+2), *(flash_rx_buf+3), *(flash_rx_buf+4), *(flash_rx_buf+5));
+	UART3_SendString ((char*)UART3_msg_TX);	
+	
+	Read_SR_W25M (flash_rx_buf);
+	sprintf (UART3_msg_TX,"SR=%x %x %x\r\n", *(flash_rx_buf), *(flash_rx_buf+1), *(flash_rx_buf+2));
+	UART3_SendString ((char*)UART3_msg_TX)
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */

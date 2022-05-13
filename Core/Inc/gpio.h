@@ -34,7 +34,7 @@ extern "C" {
 /* USER CODE BEGIN Private defines */
 #define ENABLE_SD_CARD  (HAL_GPIO_WritePin (SDMMC_PSO_GPIO_Port, SDMMC_PSO_Pin, GPIO_PIN_RESET))
 #define ENABLE_ETHERNET HAL_GPIO_WritePin(E_RES_GPIO_Port, E_RES_Pin, GPIO_PIN_SET)
-	#define ENABLE_12V  (HAL_GPIO_WritePin (EN12V_GPIO_Port, EN12V_Pin, GPIO_PIN_SET))	//включение 12V нагрузки
+#define ENABLE_12V  (HAL_GPIO_WritePin (EN12V_GPIO_Port, EN12V_Pin, GPIO_PIN_SET))	//включение 12V нагрузки
 	
 #define LED_RED(x) ((x)? (HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET)) : (HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET))); 
 #define LED_GREEN(x) ((x)? (HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET)) : (HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET))); 
@@ -58,6 +58,12 @@ extern "C" {
 
 #define BUZZER_ON  HAL_TIM_PWM_Start (&htim4, TIM_CHANNEL_4); //писк бипером
 #define BUZZER_OFF  HAL_TIM_PWM_Stop (&htim4, TIM_CHANNEL_4);
+
+#define SPI4_CS1_OFF   GPIOE->BSRR=GPIO_BSRR_BS_11  //GPIO_PIN_SET
+#define SPI4_CS1_ON   GPIOE->BSRR=GPIO_BSRR_BR_11 //GPIO_PIN_RESET
+
+#define SPI4_CS2_OFF   GPIOE->BSRR=GPIO_BSRR_BS_10  //GPIO_PIN_SET
+#define SPI4_CS2_ON   GPIOE->BSRR=GPIO_BSRR_BR_10 //GPIO_PIN_RESET
 
 /* USER CODE END Private defines */
 

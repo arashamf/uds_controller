@@ -38,6 +38,14 @@ void MX_SDMMC1_SD_Init(void)
   hsd1.Init.BusWide = SDMMC_BUS_WIDE_1B;
   hsd1.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
   hsd1.Init.ClockDiv = 6;
+  if (HAL_SD_Init(&hsd1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_SD_ConfigWideBusOperation(&hsd1, SDMMC_BUS_WIDE_4B) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
 }
 
