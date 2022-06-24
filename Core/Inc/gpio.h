@@ -32,7 +32,8 @@ extern "C" {
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN Private defines */
-#define ENABLE_SD_CARD  (HAL_GPIO_WritePin (SDMMC_PSO_GPIO_Port, SDMMC_PSO_Pin, GPIO_PIN_RESET))
+#define ENABLE_SD_CARD  (HAL_GPIO_WritePin (SD_ENABLE_GPIO_Port, SD_ENABLE_Pin, GPIO_PIN_RESET))
+#define DISABLE_SD_CARD  (HAL_GPIO_WritePin (SD_ENABLE_GPIO_Port, SD_ENABLE_Pin, GPIO_PIN_SET))
 #define ENABLE_ETHERNET HAL_GPIO_WritePin(E_RES_GPIO_Port, E_RES_Pin, GPIO_PIN_SET)
 #define ENABLE_12V  (HAL_GPIO_WritePin (EN12V_GPIO_Port, EN12V_Pin, GPIO_PIN_SET))	//включение 12V нагрузки
 	

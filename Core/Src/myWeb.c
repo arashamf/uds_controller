@@ -7,28 +7,36 @@
 #include "gpio.h" 
 
 extern char UART3_msg_TX [RS232_BUFFER_SIZE];
-
+char http [] = " HTTP";
 //******************************************************************************************************************************************************//
-signed short Parse(char *inBuf, PARSE_DATA *output)
+signed short Parse(char *inBuf, PARSE_DATA *output, RELEASE_DATA *command)
 {
 	char *tmp;	
-	unsigned short string_size = 0;
+	char *tmp_reg; //временный указатель для получения данных регистрации
 	errortype count = 0;
 	
 	if (strncmp(inBuf, "GET ", 4) != 0) 
 		{return NoGet;}								// We accept GET method only
 	
 	tmp=strchr(inBuf,' ');				// find the first ' ' from "GET "
-	inBuf=tmp+1;									// cut off the "GET "
-	
-	tmp=strchr(inBuf,' ');				// find the end of the URI (the second ' ' in fact)
-	if(tmp) 
-		*tmp=0;											// set 0 for string termination
+	inBuf=tmp+1;									// cut off the "GET "	
 	
 	tmp=strchr(inBuf,'/');				// find first '/' symbol
 	if(tmp) 
 		inBuf=tmp+1;								// Now we have "?command=cmd&param1=val1&param2=val2..."
+	
+	tmp_reg=strchr(inBuf,' '); //поиск второго вхождения символа ' '
+	if(tmp_reg) //если второй символ ' ' найден	
+	{
+		*tmp_reg = 0;		
+		strncpy(command -> registration_data, inBuf, 50); //копируем строку вида "?command=cmd&param1=val1&param2=val2..." для записи на SD карту
+		strcat (command -> registration_data, http); //добавление в строку " HTTP"
+	}	
 		
+	tmp=strchr(inBuf,' ');				// find the end of the URI (the second ' ' in fact)
+	if(tmp) 
+		*tmp=0;											// set 0 for string termination
+	
 	tmp=strchr(inBuf,'?');				// find '?'
 	if(tmp) 
 		inBuf=tmp+1;									// Now we have "command=cmd&param1=val1&param2=val2..."
@@ -38,7 +46,7 @@ signed short Parse(char *inBuf, PARSE_DATA *output)
 	
 	tmp=strchr(inBuf,'=');				// find the first '='
 	if(tmp) 
-		inBuf=tmp+1;								// cut off "command=". Now we have "cell_cmd&param1=val1&param2=val2..."
+		{inBuf=tmp+1;}								// cut off "command=". Now we have "cell_cmd&param1=val1&param2=val2..."
 	
 	if(strncmp(inBuf,"port",4)!=0) 
 		{return ErrorNumberCell;}				// параметр ячейки некорректен
@@ -74,7 +82,7 @@ signed short Parse(char *inBuf, PARSE_DATA *output)
 	{	
 		*tmp=0;											// обнуление символа '='
 		
-		if((string_size = strlen(inBuf)) > (LENGTH_PARAMETR - 1)) 
+		if((strlen(inBuf)) > (LENGTH_PARAMETR - 1)) 
 			{return TooLongTextString;}	
 			
 		strcpy(output->param[count], inBuf);				// копирование первого найденного параметра
@@ -84,7 +92,7 @@ signed short Parse(char *inBuf, PARSE_DATA *output)
 		{
 			*tmp=0;										// обнуление символа '&'
 		
-			if((string_size = strlen(inBuf)) > (LENGTH_VAL - 1)) 
+			if((strlen(inBuf)) > (LENGTH_VAL - 1)) 
 				{return TooLongTextString;}	
 		
 			strcpy(output->val[count],inBuf);				// copy "val"
@@ -92,7 +100,7 @@ signed short Parse(char *inBuf, PARSE_DATA *output)
 		}
 		else 
 		{
-			if((string_size = strlen(inBuf)) > (LENGTH_VAL - 1)) 
+			if((strlen(inBuf)) > (LENGTH_VAL - 1)) 
 				{return TooLongTextString;}	
 			
 			strcpy(output->val[count],inBuf);	// no '&' symbol which may mean the end of the string		
@@ -101,6 +109,7 @@ signed short Parse(char *inBuf, PARSE_DATA *output)
 		if (count > 2) //не более трёх параметров
 			break;
 	}
+
 	return count;
 }	
 
@@ -159,8 +168,29 @@ errortype  make_command (errortype count, PARSE_DATA *output, RELEASE_DATA * get
 		return Ok;
 	}
 	
-	if(strcmp(output -> inCommand,"read")==0) {											
-		return CommandNotSupported;	}
+	if(strcmp(output -> inCommand,"read")==0) 
+	{	
+		if ((strncmp(output -> param [0], "file_num", 8))!=0) //проверка параметра
+			{return ErrorParam;}
+		else
+		{	
+			if((strlen(output -> val[0])) > 3) //цифровая часть названия лог-файла должна быть не длиннее 3 символов (001...366)
+				{return TooLongTextString;}	
+			for (size_t count = 0; count < 3; count++)
+			{
+				if ((output -> val[0][count] > 0x39) || (output -> val[0][count] < 0x30)) //все 3 символа должны быть числами
+					{return ErrorParam;}
+			}
+			getsetting -> number_day = (((output -> val[0][0] - 0x30)*100) + ((output -> val[0][1] - 0x30)*10) + ((output -> val[0][2] - 0x30)));
+			if ((getsetting -> number_day > 366) || (getsetting -> number_day < 1)) //от 1 до 366
+				{return ErrorParam;}
+			else
+			{
+				output -> type_command = Read;	
+				return Ok;	
+			}
+		}
+	}
 	
 	if(strcmp(output -> inCommand,"0read")==0) {											
 		return CommandNotSupported;	}
@@ -173,61 +203,43 @@ errortype  make_command (errortype count, PARSE_DATA *output, RELEASE_DATA * get
 		else
 		{
 			if ((strncmp(output -> param [0], "d", 1)) || (strncmp(output -> param [1], "m", 1)) || (strncmp(output -> param [2], "y", 1)))
-			{
-				return ErrorParam;				
-			}	
+				{return ErrorParam;}
 			else
 			{
 				if (!((output -> val[0][0] > 47) && (output -> val[0][0] < 52))) //старший разряд дня даты должен быть не менее 0 и не боллее 3 (0-3)
-				{
-					return ErrorParam;			
-				}
+					{return ErrorParam;}
 				else
 				{
 					if (output -> val[0][0] == 51) //если старший разряд даты равен 3
 					{
 						if (!((47 < output -> val[0][1]) && (output -> val[0][1] < 50))) //младший разряд дня даты должен находиться в диапазоне от 0 до 1 (30-31)
-						{
-							return ErrorParam;
-						}
+							{return ErrorParam;}
 					}
 					else
 					{
 						if (!((47 < output -> val[0][1]) && (output -> val[0][1] < 58))) //младший разряд дня даты должен находиться в диапазоне от 0 до 9 (00-29)
-						{
-							return ErrorParam;
-						}
+							{return ErrorParam;}
 					}
 				}
 				if (!((47 < output -> val[1][0]) && (output -> val[1][0] < 50))) //старший разряд месяца должен быть в диапазоне от 0 до 1 (0..1)
-				{
-					return ErrorParam;
-				}
+					{return ErrorParam;}
 				else
 				{
 					if (output -> val[1][0] == 49) //если старший разряд месяца равен 1
 					{	
 						if (!((47 < output -> val[1][1]) && (output -> val[1][1] < 51))) //младший разряд месяца должен находиться в диапазоне от 0 до 2 (10..12)
-						{
-							return ErrorParam;
-						}
+							{return ErrorParam;}
 					}
 					else
 					{
 						if (!((47 < output -> val[1][1]) && (output -> val[1][1] < 58))) //младший разряд месяца должен находиться в диапазоне от 0 до 9 (00..09)
-						{
-							return ErrorParam;
-						}
+							{return ErrorParam;}
 					}
 				}
 				if (!((47 < output -> val[2][0]) && (output -> val[2][0] < 58))) //старший разряд года должен находиться в диапазоне [0..9]
-				{	
-					return ErrorParam;
-				}
+					{return ErrorParam;}
 				if (!((47 < output -> val[2][1]) && (output -> val[2][1] < 58))) //младший разряд года должен находиться в диапазоне [00..99]
-				{	
-					return ErrorParam;
-				}
+					{return ErrorParam;}
 				else
 				{
 					uint8_t ptr = 0;
@@ -250,52 +262,36 @@ errortype  make_command (errortype count, PARSE_DATA *output, RELEASE_DATA * get
 	if(strcmp(output -> inCommand,"rtss")==0) 
 	{						
 		if (count < 3)
-			return UnknownParam;
+			{return UnknownParam;}
 		else
 		{
 			if ((strncmp(output -> param [0], "h", 1)) || (strncmp(output -> param [1], "m", 1)) || (strncmp(output -> param [2], "s", 1)))
-			{
-				return ErrorParam;				
-			}	
+				{return ErrorParam;}
 			else
 			{
 				if (!((output -> val[0][0] > 47) && (output -> val[0][0] < 51))) //старший разряд часов должен быть не менее 0 и не более 2 (0..2)
-				{
-					return ErrorParam;			
-				}
+					{return ErrorParam;}
 				else
 				{
 					if (output -> val[0][0] == 50) //если старший разряд часов равен 2
 					{
 						if (!((output -> val[0][1] > 47) && (output -> val[0][1] < 52))) //младший разряд часов должен находиться в диапазоне от 0 до 3 (20..23)
-						{
-							return ErrorParam;
-						}
+							{return ErrorParam;}
 					}	
 					else
 					{
 						if (!((output -> val[0][1] > 47) && (output -> val[0][1] < 58))) //младший разряд часов должен находиться в диапазоне от 0 до 9 (00..19)
-						{
-							return ErrorParam;
-						}
+							{return ErrorParam;}
 					}
 				}
 				if (!((47 < output -> val[1][0]) && (output -> val[1][0] < 54))) //старший  разряд минут должен быть в диапазоне от 0 до 5
-				{
-					return ErrorParam;
-				}
+					{return ErrorParam;}
 				if (!((47 < output -> val[1][1]) && (output -> val[1][1] < 58))) //младший  разряд минут должен быть в диапазоне от 0 до 9
-				{	
-						return ErrorParam;
-				}
+					{return ErrorParam;}
 				if (!((47 < output -> val[2][0]) && (output -> val[2][0] < 54))) //старший  разряд секунд должен быть в диапазоне от 0 до 9
-				{	
-						return ErrorParam;
-				}
+					{return ErrorParam;}
 				if (!((47 < output -> val[2][1]) && (output -> val[2][1] < 58))) //младший  разряд секунд должен быть в диапазоне от 0 до 9
-				{	
-						return ErrorParam;
-				}
+					{return ErrorParam;}
 				else
 				{
 					output -> type_command = SetNewTime; //идентификатор установки времени
@@ -378,47 +374,47 @@ void Read_TCP_Message (char *msg_input, 	RELEASE_DATA * getsetting)
 	PARSE_DATA parse_buffer;
 	PARSE_DATA *ptr_buffer = &parse_buffer;
 	
-	if ((parseRes = Parse(msg_input, ptr_buffer)) >= 0)	// если первичный парсинг прошёл успешно (т.е.общая структура команды соответсвует шаблону)
+	if ((parseRes = Parse(msg_input, ptr_buffer, getsetting)) >= 0)	// если первичный парсинг прошёл успешно (т.е.общая структура команды соответсвует шаблону)
 	{
 		parseRes = make_command (parseRes, ptr_buffer, getsetting); //в этой ф-ии проверяется корректность полученной команды и её параметров, и заполняется специальная структура данных
 	}
 	
-	strcpy (getsetting->answerbuf, "HTTP/1.1 200 OK\nContent-type: text/plain\n\nAnswer=");      
+//	strcpy (getsetting->answerbuf, "HTTP/1.1 200 OK\nContent-type: text/plain\n\nAnswer=");      
 	if(parseRes < 0)	//если в предыдущих 2 функциях парсинга была получена ощибка, выводим тип этой ошибки
 	{
 		if(parseRes == NoGet) {	
-			strcat(getsetting->answerbuf,"ERROR&no_get");	
+			sprintf (getsetting->answerbuf,"no_get");	
 		}
 		if(parseRes == NoCommand) {	
-			strcat(getsetting->answerbuf,"ERROR&illegal_command");	
+			sprintf (getsetting->answerbuf,"illegal_command");	
 		}
 		if(parseRes == UnknownParam) 
 		{	
-			strcat(getsetting->answerbuf,"ERROR&unknown_param");	
+			sprintf (getsetting->answerbuf,"unknown_param");	
 		}
 		if(parseRes == UnknownCommand) 
 		{	
-			strcat(getsetting->answerbuf,"ERROR&unknown_command"); //не использую
+			sprintf (getsetting->answerbuf,"unknown_command"); //не использую
 		}
 		if(parseRes == CommandNotSupported) 
 		{	
-			strcat(getsetting->answerbuf,"ERROR&command_not_supported");	//не использую
+			sprintf (getsetting->answerbuf,"command_not_supported");	//не использую
 		}
 		if(parseRes == TooManyTexts) 
 		{	
-			strcat (getsetting->answerbuf,"ERROR&too_many_texts");	//не использую
+			sprintf (getsetting->answerbuf,"too_many_texts");	//не использую
 		}
 		if(parseRes == TooLongTextString) 
 		{	
-			strcat (getsetting->answerbuf,"ERROR&too_long_text_string");	
+			sprintf (getsetting->answerbuf,"too_long_text_string");	
 		}
 		if(parseRes == ErrorParam) 
 		{	
-			strcat(getsetting->answerbuf,"ERROR&illegal_param");	
+			sprintf (getsetting->answerbuf,"illegal_param");	
 		}
 		if(parseRes == ErrorNumberCell) 
 		{	
-			strcat(getsetting->answerbuf,"ERROR&illegal_number_cell");	
+			sprintf (getsetting->answerbuf,"illegal_number_cell");	
 		}
 		getsetting->type_data = parseRes;
 	}
@@ -428,6 +424,8 @@ void Read_TCP_Message (char *msg_input, 	RELEASE_DATA * getsetting)
 		{	
 			strcat(getsetting->answerbuf,"OK"); //объединение строк. K output добавляется Ок
 			getsetting -> type_data = ptr_buffer -> type_command; //шифр команды
+			if ((getsetting -> type_data == 200) || (getsetting -> type_data == Read))
+				getsetting ->registration_data[0] = '\0'; //state 200 и read не регистрируем
 		}		
 	}
 //	sprintf(UART3_msg_TX, "%s\r\n", getsetting->answerbuf);

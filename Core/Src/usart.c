@@ -23,14 +23,12 @@
 /* USER CODE BEGIN 0 */
 
 extern osMessageQId RS485_msg_Queue;
-extern osMutexId mutex_RS485_Handle;
 
 char counter_byte_UART1 = 0;
 
 extern char UART3_msg_TX [RS232_BUFFER_SIZE];
 extern char RS485_RXbuffer [RX_BUFFER_SIZE];
-extern char RS485_TXbuffer [4];
-extern uint8_t cell_state [MAX_SELL+1][5];
+extern char RS485_TXbuffer [TX_BUFFER_SIZE];
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
@@ -42,7 +40,7 @@ void MX_USART1_UART_Init(void)
 {
 
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 115741;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -191,7 +189,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 //	char *ptr_UART1_buf = UART_msg_RX;
 	if(huart==&huart1)
   {
-		osMessagePut (RS485_msg_Queue, (uint32_t)RS485_RXbuffer, 10);
+		if(RS485_RXbuffer [0] == 0x03){    //признак начала пакета от ячейки
+					osMessagePut (RS485_msg_Queue, (uint32_t)RS485_RXbuffer, 10);}
+		else
+		{
+			for (size_t count = 0; count < RX_BUFFER_SIZE; count++){
+				RS485_RXbuffer [count] = 0;}
+		}
 		osThreadYield (); //переключение контектса
 	}
 }
@@ -202,13 +206,11 @@ void UART1_SendByte(char b)
 	int timeout = 300000;
 	while ((USART1->ISR & UART_FLAG_TXE) == (uint16_t)RESET)
 	{
-		if(timeout--==0)
-			return;
+		if(timeout --== 0){
+			return;}
 	}
-	if ((USART1->ISR & USART_ISR_TC) == USART_ISR_TC)
-	{
-		USART1->TDR = (b & (uint16_t)0x01FF); /// Transmit Data 
-	}
+	if ((USART1->ISR & USART_ISR_TC) == USART_ISR_TC) {
+		USART1->TDR = (b & (uint16_t)0x01FF);} /// Transmit Data 
 	while ((USART1->ISR & UART_FLAG_TC) == (uint16_t)RESET){}	//wait for trasmit
 }
 
@@ -220,46 +222,6 @@ void UART1_SendString (const char * text)
 		UART1_SendByte(*text);
 		text++;
 	}
-}
-
-//****************************************************************************************************************************************************//
-void PutCommandToCell (char * buffer_command)
-{
-	taskENTER_CRITICAL(); //вход в критическую секцию
-	RS485_TX; //режим на передачу		
-	UART1_SendString (buffer_command); //передача сообщения
-	HAL_UART_Receive_IT(&huart1, (uint8_t*)RS485_RXbuffer, 6); //ожидание получение сообщения (6 байт) от ячейки
-	RS485_RX; //режим на приём
-	taskEXIT_CRITICAL(); //выход из критической секции			
-}
-
-//****************************************************************************************************************************************************//
-void command_AllCell (uint8_t typecommand, uint8_t NumberOfCell)
-{
-	osEvent event; 
-	uint8_t * ptr_RS485_msg;
-	
-	RS485_TXbuffer [3] = typecommand + 0x30; //передача типа запроса, 1 - 'open','0 - 'close'
-	if (osMutexWait (mutex_RS485_Handle, 50) == osOK) //ожидание и захват мьютекса в течение xx мс
-	{
-		for (size_t count = 0; count < NumberOfCell; count++)
-		{	
-			RS485_TXbuffer [1] = ((count+1)/10 + 0x30); //старший символ номера ячейки	
-			RS485_TXbuffer [2] = ((count+1)%10 + 0x30); //младший символ номера ячейки
-		
-			PutCommandToCell (RS485_TXbuffer);
-		
-			event = osMessageGet(RS485_msg_Queue, 2); //ожидание появления данных в очереди
-			if (event.status == osEventMessage) //если данные с ответом от ячейки появились в очереди
-			{	
-				(void)event.value.v;
-				ptr_RS485_msg = (uint8_t *)event.value.v;
-				memcpy ((cell_state + count), (ptr_RS485_msg+1), 5); //копирование 5 символов сообщения от ячейки, начиная с 2 элемента
-			}	
-			osDelay (400);
-		}		
-	}
-	osMutexRelease (mutex_RS485_Handle);
 }
 //****************************************************************************************************************************************************//
 

@@ -16,14 +16,14 @@ void ReadID_W25M (uint8_t * rx_buffer)
 //	HAL_SPI_Transmit_DMA (&hspi4, &buffer, 1);
 //	HAL_SPI_Receive_DMA (&hspi4, rx_buffer, 3); 
 	HAL_SPI_Transmit (&hspi4, &buffer, 1, 0xFFFF);
-	HAL_SPI_Receive (&hspi4, rx_buffer, 3, 0xFFFF); 
+	HAL_SPI_Receive (&hspi4, rx_buffer, 4, 0xFFFF); 
 	SPI4_CS1_OFF;
 	
 	SPI4_CS2_ON;
 //	HAL_SPI_Transmit_DMA (&hspi4, &buffer, 1);
 	//HAL_SPI_Receive_DMA (&hspi4, rx_buffer+3, 3);
 	HAL_SPI_Transmit (&hspi4, &buffer, 1, 0xFFFF);
-	HAL_SPI_Receive (&hspi4, rx_buffer+3, 3, 0xFFFF); 
+	HAL_SPI_Receive (&hspi4, rx_buffer+4, 4, 0xFFFF); 
 	SPI4_CS2_OFF;
 }
 

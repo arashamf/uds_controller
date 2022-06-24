@@ -1,5 +1,7 @@
 #include "rtc.h"
 
+//массив с количеством дней в предыдущем месяце, [0][12] - не високосный, [1][12] - високосный 
+const unsigned int pred_sum [2] [12] = { {0,31,59,90,120,151,181,212,243,273,304,334}, {0,31,60,91,121,152,182,213,244,274,305,335} };
 
 extern char UART3_msg_TX [RS232_BUFFER_SIZE]; //буффер для передачи сообщений по UART3
 extern char RS485_RXbuffer [RX_BUFFER_SIZE];; //буффер для приёма сообщений по UART3
@@ -110,15 +112,15 @@ uint8_t RTC_ConvertToBinDec(uint8_t digit)
 
 
 //******************************************************************************************************************************************************//
-void read_reg_RTC (I2C_HandleTypeDef hi, uint8_t adress)
+void read_reg_RTC (uint8_t adress, uint8_t sizebuf)
 {
 	uint8_t reg_adr = 0x2; //адрес регистра RTC 
-	uint8_t sizebuf = 0x3; //количество байт для чтения
+//	uint8_t sizebuf = 0x3; //количество байт для чтения
 	uint8_t I2C_RTC_buffer [sizebuf];
-	//передача адреса ds3231
-	while(HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)adress, &reg_adr, 1, (uint32_t)0xFFFF)!= HAL_OK) //запись адреса RTC
+	
+	while(HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)adress, &reg_adr, 1, (uint32_t)0xFFFF)!= HAL_OK) //передача адреса RTC DS3231
   {
-		if (HAL_I2C_GetError(&hi) != HAL_I2C_ERROR_AF)
+		if (HAL_I2C_GetError(&hi2c1) != HAL_I2C_ERROR_AF)
 		{
 			sprintf (UART3_msg_TX , "write_error\r\n");
 			UART3_SendString (UART3_msg_TX);
@@ -128,7 +130,7 @@ void read_reg_RTC (I2C_HandleTypeDef hi, uint8_t adress)
 		
 	while (HAL_I2C_Master_Receive (&hi2c1, (uint16_t) adress, (uint8_t*)I2C_RTC_buffer, (uint16_t) sizebuf, (uint32_t)0xFFFF)!=HAL_OK)
 	{
-		if(HAL_I2C_GetError(&hi)!=HAL_I2C_ERROR_AF)
+		if(HAL_I2C_GetError(&hi2c1)!=HAL_I2C_ERROR_AF)
 		{
 			sprintf (UART3_msg_TX , "read_error\r\n");
 			UART3_SendString (UART3_msg_TX);
@@ -145,7 +147,7 @@ void read_reg_RTC (I2C_HandleTypeDef hi, uint8_t adress)
 }
 
 //******************************************************************************************************************************************************//
-void edit_RTC_data (I2C_HandleTypeDef hi, uint8_t adress,  char * time)
+void edit_RTC_data (uint8_t adress,  char * time)
 {	
 	char *ptr;	
 	uint8_t errflag = 1; //флаг ошибки данных
@@ -204,19 +206,21 @@ void edit_RTC_data (I2C_HandleTypeDef hi, uint8_t adress,  char * time)
 			}
 		}
 	}			
-	if (errflag == 1)
-	{
-		/*sprintf (UART3_msg_TX , "data_ok\r\n");	
-		UART3_SendString (UART3_msg_TX);
-		SetTime (hi, adress, time); //отправка данных времени на мк RTC
-		sprintf (wtext, "%u:%u:%u set time\r\n", RTC_ConvertToDec (I2C_RTC_buffer [3]),RTC_ConvertToDec (I2C_RTC_buffer [2]), RTC_ConvertToDec (I2C_RTC_buffer [1]));
-		write_reg (&logfile , wtext);*/
-	}
-	else
+	if (!errflag)
 	{
 		sprintf (UART3_msg_TX , "%s- data_error\r\n", time);	
 		UART3_SendString (UART3_msg_TX);
 	}
+}
+
+//******************************************************************************************************************************************************//
+uint8_t get_file_title (void)
+{
+	uint8_t Date [3]; 
+	uint8_t file_title = 0;
+	GetTime (RTC_ADDRESS,  FIRST_RTC_REGISTR_DATE, 3, Date); //чтение регистров 0х4-0х6 (дата: дд/мм/гг)
+	file_title = ((pred_sum [0][*(Date+1)-1] )+ *Date);
+	return file_title;
 }
 
 //******************************************************************************************************************************************************//

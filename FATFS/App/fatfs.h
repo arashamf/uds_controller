@@ -25,21 +25,28 @@
 
 #include "ff.h"
 #include "ff_gen_drv.h"
-#include "user_diskio.h" /* defines USER_Driver as external */
+#include "sd_diskio.h" /* defines SD_Driver as external */
 
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
+#include "string.h"
+#include "usart.h" 
+#include "sdmmc.h"
 /* USER CODE END Includes */
 
-extern uint8_t retUSER; /* Return value for USER */
-extern char USERPath[4]; /* USER logical drive path */
-extern FATFS USERFatFS; /* File system object for USER logical drive */
-extern FIL USERFile; /* File object for USER */
+extern uint8_t retSD; /* Return value for SD */
+extern char SDPath[4]; /* SD logical drive path */
+extern FATFS SDFatFS; /* File system object for SD logical drive */
+extern FIL SDFile; /* File object for SD */
 
 void MX_FATFS_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+void reset_SD_card (void);
+uint8_t mount_card (FATFS* );
+uint32_t read_txt (FIL* ,  const char *, char *, uint32_t );
+FRESULT write_reg (FIL* , const char *, const char *);
+uint32_t write_txt (FIL* , FRESULT , const char* );
 /* USER CODE END Prototypes */
 #ifdef __cplusplus
 }

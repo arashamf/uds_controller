@@ -59,8 +59,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define SDMMC_PSO_Pin GPIO_PIN_2
-#define SDMMC_PSO_GPIO_Port GPIOE
+#define SD_ENABLE_Pin GPIO_PIN_2
+#define SD_ENABLE_GPIO_Port GPIOE
 #define SIDE_COVER_Pin GPIO_PIN_3
 #define SIDE_COVER_GPIO_Port GPIOE
 #define TOP_COVER_Pin GPIO_PIN_4
@@ -87,8 +87,8 @@ void Error_Handler(void);
 #define TXD_GPIO_Port GPIOA
 #define RXD_Pin GPIO_PIN_10
 #define RXD_GPIO_Port GPIOA
-#define SDMMC_CD_Pin GPIO_PIN_0
-#define SDMMC_CD_GPIO_Port GPIOD
+#define SD_DETECTED_Pin GPIO_PIN_0
+#define SD_DETECTED_GPIO_Port GPIOD
 #define BUTTON_3_Pin GPIO_PIN_3
 #define BUTTON_3_GPIO_Port GPIOD
 #define BUTTON_2_Pin GPIO_PIN_4
@@ -108,9 +108,11 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 #define RS232_BUFFER_SIZE 100
 #define RX_BUFFER_SIZE 7
-#define MAX_SELL 8 //количество ячеек
+#define TX_BUFFER_SIZE 4
+#define MAX_CELL 8 //количество ячеек без учёта мастер-ячейки
 #define RTC_ADDRESS 0xD0 //i2c-адрес мк RTC со сдвигом влево на один разряд 
 #define FLASH_IP_ADDRESS 0x080FF030 //адресс для хранения ip-адреса
+#define TXT_BUFFER_SIZE 50 //размер буфферов для чтения/записи на SD
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

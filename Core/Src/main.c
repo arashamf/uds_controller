@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "dma.h"
 #include "fatfs.h"
 #include "i2c.h"
 #include "iwdg.h"
@@ -72,13 +73,17 @@ void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN 0 */
 char UART3_msg_TX [RS232_BUFFER_SIZE];
 char RS485_RXbuffer [RX_BUFFER_SIZE] = {0};
-char RS485_TXbuffer [4];
+char RS485_TXbuffer [TX_BUFFER_SIZE];
 
-uint8_t flash_rx_buf[20] = {0};
-uint8_t flash_tx_buf[10];
+uint8_t prev_cell_state [MAX_CELL+1][7] = {0}; //массив с данными от ячеек
 
-uint8_t cell_state [MAX_SELL+1][5] = {0}; //массив с данными от ячеек
 char mod_ip_adress [16]; //ip-адрес в символьной форме (например 192.168.001.060) для регистрации и отображения
+
+char logSDPath; // User logical drive path 
+FIL wlogfile;     //файловый объект для записи
+FIL rlogfile;     //файловый объект для чтения 
+FATFS log_fs ;    // рабочая область (file system object) для логических диска 
+
 /* USER CODE END 0 */
 
 /**
@@ -118,6 +123,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_I2C1_Init();
   MX_USART1_UART_Init();
   MX_USART3_UART_Init();
@@ -137,10 +143,19 @@ int main(void)
 	LCD_ShowString(5,10,"controller_staring...");
 	LCD_Refresh();
 	
-	ENABLE_ETHERNET;
-	ENABLE_12V;
+	ENABLE_ETHERNET; //включения ETHERNET модуля
+	ENABLE_12V; //включения контроллеров ячеек
 	RS485_RX; //режим на приём
-	ENABLE_SD_CARD;	
+	ENABLE_SD_CARD;	//включения питания SD карты
+	
+	prev_cell_state[0][0] = '1'; 
+	prev_cell_state[0][1] = '4'; //мастер ячейка	
+	for (uint8_t count_cell = 1; count_cell <= MAX_CELL; count_cell++)
+	{
+		prev_cell_state[count_cell][0] = (count_cell/10 + 0x30); //установка номера ячейки
+		prev_cell_state[count_cell][1] = (count_cell%10 + 0x30);
+		prev_cell_state[count_cell][2] = 0; //начальная инициализация
+	}
 	
 	if (READ_BIT (RCC->CSR, RCC_CSR_IWDGRSTF)) //если установлен бит IWDGRST (флаг срабатывания IWDG)
 	{
@@ -154,15 +169,6 @@ int main(void)
 		UART3_SendString ((char*)UART3_msg_TX);	
 	}
 	
-	Reset_W25M ();
-	
-	ReadID_W25M (flash_rx_buf);
-	sprintf (UART3_msg_TX,"ID=%x %x %x %x %x %x\r\n", *(flash_rx_buf), *(flash_rx_buf+1), *(flash_rx_buf+2), *(flash_rx_buf+3), *(flash_rx_buf+4), *(flash_rx_buf+5));
-	UART3_SendString ((char*)UART3_msg_TX);	
-	
-	Read_SR_W25M (flash_rx_buf);
-	sprintf (UART3_msg_TX,"SR=%x %x %x\r\n", *(flash_rx_buf), *(flash_rx_buf+1), *(flash_rx_buf+2));
-	UART3_SendString ((char*)UART3_msg_TX)
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */

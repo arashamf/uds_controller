@@ -26,6 +26,7 @@
 
 #include "main.h"
 #include "stm32f7xx_hal.h"
+#include "bsp_driver_sd.h"
 #include "cmsis_os.h" /* _FS_REENTRANT set to 1 and CMSIS API chosen */
 
 /*-----------------------------------------------------------------------------/
@@ -112,7 +113,7 @@
 */
 
 #define _USE_LFN     0    /* 0 to 3 */
-#define _MAX_LFN     255  /* Maximum LFN length to handle (12 to 255) */
+#define _MAX_LFN     63  /* Maximum LFN length to handle (12 to 255) */
 /* The _USE_LFN switches the support of long file name (LFN).
 /
 /   0: Disable support of LFN. _MAX_LFN has no effect.
