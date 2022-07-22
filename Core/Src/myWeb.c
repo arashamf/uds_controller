@@ -149,17 +149,11 @@ errortype  make_command (errortype count, PARSE_DATA *output, RELEASE_DATA * get
 	}
 	
 	//проверка команды state
-	if(strcmp(output -> inCommand,"state")==0) 
+	if (strncmp (output -> inCommand, "state", 5)==0) 
 	{		
 		output -> type_command = 200 + cell_number;
 		return Ok;	
 	}
-	
-	if(strcmp(output -> inCommand,"reset")==0) {												// restore all default setup, including network and web interface
-		return CommandNotSupported;	}	
-	
-	if(strcmp(output -> inCommand,"setup")==0) {											// activate web interface
-		return CommandNotSupported;	}
 	
 	//проверка команды term
 	if(strcmp(output -> inCommand,"term")==0) 
@@ -317,9 +311,6 @@ errortype  make_command (errortype count, PARSE_DATA *output, RELEASE_DATA * get
 		return Ok;
 	}
 	
-	if(strcmp(output -> inCommand,"clear")==0) {											
-		return CommandNotSupported;	}
-	
 		//проверка команды установки ip адреса
 	if(strcmp(output -> inCommand,"iset")==0) 
 	{		
@@ -363,6 +354,16 @@ errortype  make_command (errortype count, PARSE_DATA *output, RELEASE_DATA * get
 	if(strcmp(output -> inCommand,"st22")==0) 
 		{return CommandNotSupported;}
 	
+		
+	if(strcmp(output -> inCommand,"reset")==0) {												// restore all default setup, including network and web interface
+		return CommandNotSupported;	}	
+	
+	if(strcmp(output -> inCommand,"setup")==0) {											// activate web interface
+		return CommandNotSupported;	}	
+	
+	if(strcmp(output -> inCommand,"clear")==0) {											
+		return CommandNotSupported;	}
+		
 		return NoCommand;							// если ничего не подошло
 }
 
@@ -424,12 +425,10 @@ void Read_TCP_Message (char *msg_input, 	RELEASE_DATA * getsetting)
 		{	
 			strcat(getsetting->answerbuf,"OK"); //объединение строк. K output добавляется Ок
 			getsetting -> type_data = ptr_buffer -> type_command; //шифр команды
-			if ((getsetting -> type_data == 200) || (getsetting -> type_data == Read))
+			if (((getsetting -> type_data / 100) == 2) || (getsetting -> type_data == Read)) //команды state и read не регистрируем
 				getsetting ->registration_data[0] = '\0'; //state 200 и read не регистрируем
 		}		
 	}
-//	sprintf(UART3_msg_TX, "%s\r\n", getsetting->answerbuf);
-//	UART3_SendString ((char*)UART3_msg_TX);	
 }
 //***********************************************ф-я конвертации ip-адресса из числовой формы в символьную***********************************************//
 

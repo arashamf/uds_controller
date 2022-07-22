@@ -61,7 +61,6 @@ uint8_t mount_card (FATFS* fs)
 	uint8_t result = 0; //код возврата функций FatFs
 	/*if((result = FATFS_LinkDriver(&SD_Driver, &logSDPath)) != 0)
 		return result;*/
-//	MX_SDMMC1_SD_Init();
 	if((result = BSP_SD_Init()) != MSD_OK)
 		return result;
 	result = f_mount (fs, (TCHAR const*)"/", 1);  //монтирование рабочей области для каждого тома (если 0 - отложенное монтирование, 1 - немедленное монтирование)  
@@ -141,8 +140,7 @@ uint32_t write_txt (FIL* fp, FRESULT result, const char* buffer)
 {
 	uint32_t bytesize = 0; 
 //	unsigned long filesize = 0; //размер файла в байтах
-	//if ((filesize = f_size(fp)) > 0)
-//		f_lseek (fp, filesize); //Перемещение в конец файла для добавления новых данных
+	//(filesize = f_size(fp));
 	result = f_write (fp, buffer, strlen(buffer), &bytesize); //bytesize - Количество записанных байт
 	if((bytesize	!=	strlen(buffer))||(result	!=	FR_OK))
 	{

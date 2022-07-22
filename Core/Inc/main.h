@@ -112,7 +112,10 @@ void Error_Handler(void);
 #define MAX_CELL 8 //количество ячеек без учёта мастер-ячейки
 #define RTC_ADDRESS 0xD0 //i2c-адрес мк RTC со сдвигом влево на один разряд 
 #define FLASH_IP_ADDRESS 0x080FF030 //адресс для хранения ip-адреса
-#define TXT_BUFFER_SIZE 50 //размер буфферов для чтения/записи на SD
+#define SOLENOIDS_ON 1 //команда включения соленоидов
+#define SOLENOIDS_OFF 0 //команда выключения соленоидов
+#define WRITE_LOG 1
+#define READ_LOG 2
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
