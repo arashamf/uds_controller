@@ -52,7 +52,7 @@ uint8_t NETMASK_ADDRESS[4];
 uint8_t GATEWAY_ADDRESS[4];
 
 /* USER CODE BEGIN 2 */
-uint8_t flash_ip_adress [4] = {0}; //здесь  хранится ip-адрес, считанный из flash
+extern uint8_t save_ip_adress [4]; //здесь  хранится ip-адрес, считанный из flash
 /* USER CODE END 2 */
 
 /**
@@ -75,12 +75,12 @@ void MX_LWIP_Init(void)
   GATEWAY_ADDRESS[3] = 100;
 
 /* USER CODE BEGIN IP_ADDRESSES */
-	if (read_flash (FLASH_IP_ADDRESS, flash_ip_adress))
+	if (read_flash (FLASH_IP_ADDRESS, save_ip_adress))
 	{
-		IP_ADDRESS[0] = flash_ip_adress [0];
-		IP_ADDRESS[1] = flash_ip_adress [1];
-		IP_ADDRESS[2] = flash_ip_adress [2];
-		IP_ADDRESS[3] = flash_ip_adress [3];
+		IP_ADDRESS[0] = save_ip_adress [0];
+		IP_ADDRESS[1] = save_ip_adress [1];
+		IP_ADDRESS[2] = save_ip_adress [2];
+		IP_ADDRESS[3] = save_ip_adress [3];
 	}
 /* USER CODE END IP_ADDRESSES */
 

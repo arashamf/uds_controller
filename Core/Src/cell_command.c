@@ -29,9 +29,9 @@ void command_AllCell (uint8_t typecommand, uint8_t NumberOfCell, uint8_t **ptr_c
 	{	
 		if (osMutexWait (mutex_RS485_Handle, 50) == osOK) //ожидание и захват мьютекса
 		{		
-		RS485_TXbuffer [1] = (count/10 + 0x30); //старший символ номера ячейки	
-		RS485_TXbuffer [2] = (count%10 + 0x30); //младший символ номера ячейки	
-		RS485_TXbuffer [3] = typecommand + 0x30; //передача типа запроса, 1 - 'open','0 - 'close'
+			RS485_TXbuffer [1] = (count/10 + 0x30); //старший символ номера ячейки	
+			RS485_TXbuffer [2] = (count%10 + 0x30); //младший символ номера ячейки	
+			RS485_TXbuffer [3] = typecommand + 0x30; //передача типа запроса, 1 - 'open','0 - 'close'
 //		sprintf (UART3_msg_TX,"%c,%c-%c\r\n", RS485_TXbuffer [1], RS485_TXbuffer [2], RS485_TXbuffer [3]);
 //		UART3_SendString (UART3_msg_TX);
 																

@@ -47,20 +47,30 @@
 
 /* LwIP Stack Parameters (modified compared to initialization value in opt.h) -*/
 /* Parameters set in STM32CubeMX LwIP Configuration GUI -*/
-/*----- Default Value for MEMP_NUM_TCP_PCB: 5 ---*/
-#define MEMP_NUM_TCP_PCB 8
 /*----- Value in opt.h for MEM_ALIGNMENT: 1 -----*/
 #define MEM_ALIGNMENT 4
 /*----- Default Value for MEM_SIZE: 1600 ---*/
 #define MEM_SIZE 2048
+/*----- Default Value for MEMP_NUM_TCP_PCB_LISTEN: 8 ---*/
+#define MEMP_NUM_TCP_PCB_LISTEN 6
 /*----- Default Value for MEMP_NUM_NETBUF: 2 ---*/
 #define MEMP_NUM_NETBUF 6
 /*----- Default Value for MEMP_NUM_NETCONN: 4 ---*/
 #define MEMP_NUM_NETCONN 8
 /*----- Default Value for MEMP_NUM_TCPIP_MSG_API: 8 ---*/
 #define MEMP_NUM_TCPIP_MSG_API 16
+/*----- Default Value for MEMP_NUM_API_MSG: 16 ---*/
+#define MEMP_NUM_API_MSG 8
+/*----- Default Value for MEMP_NUM_DNS_API_MSG: 16 ---*/
+#define MEMP_NUM_DNS_API_MSG 8
+/*----- Default Value for MEMP_NUM_SOCKET_SETGETSOCKOPT_DATA: 16 ---*/
+#define MEMP_NUM_SOCKET_SETGETSOCKOPT_DATA 8
+/*----- Default Value for MEMP_NUM_NETIFAPI_MSG: 16 ---*/
+#define MEMP_NUM_NETIFAPI_MSG 8
 /*----- Value in opt.h for LWIP_ETHERNET: LWIP_ARP || PPPOE_SUPPORT -*/
 #define LWIP_ETHERNET 1
+/*----- Default Value for IP_REASS_MAXAGE: 15 ---*/
+#define IP_REASS_MAXAGE 3
 /*----- Value in opt.h for LWIP_DNS_SECURE: (LWIP_DNS_SECURE_RAND_XID | LWIP_DNS_SECURE_NO_MULTIPLE_OUTSTANDING | LWIP_DNS_SECURE_RAND_SRC_PORT) -*/
 #define LWIP_DNS_SECURE 7
 /*----- Default Value for TCP_WND: 2880 ---*/

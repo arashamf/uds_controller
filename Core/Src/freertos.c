@@ -77,7 +77,6 @@ const char httpHeader[] = "HTTP/1.1 200 OK\nContent-type: text/plain\n\n" ;  // 
 const char power_on[] = " power_on" ;  // 
 
 uint8_t flag_masterkey = 0; //флаг срабатывания мастер ключа
-//uint8_t timer_masterkey = 0; //флаг срабатывания мастер ключа
 
 extern uint8_t IP_ADDRESS[4]; //установленный ip-адрес в виде четырёх uint8_t (lwip.c)  
 extern char mod_ip_adress [16]; //ip-адрес в символьной форме (например 192.168.001.060) для регистрации и отображения
@@ -288,7 +287,6 @@ void StartDefaultTask(void const * argument)
   MX_LWIP_Init();
   /* USER CODE BEGIN StartDefaultTask */
   /* Infinite loop */
-//	convert_ip (mod_ip_adress, IP_ADDRESS);
 //	TIM4->CCR4 = 50; //ширина импульса шим = 1/2Т
 	osTimerStart(osProgTimerIWDG, 8000); //запуск циклического таймера сторожевика
 	
@@ -808,11 +806,11 @@ void Ping_All_Sell (void const * argument)
 		}
 		
 		//проверка состояния микриков мастер-ячейки
-		if ((status_inputs = READ_BIT(GPIOE->IDR,  SIDE_COVER_Pin | MASTER_KEY_Pin | TOP_COVER_Pin)) != old_status_inputs) //если состояние мастер ключей было изменено
+		if ((status_inputs = READ_BIT(MASTER_KEY_GPIO_Port->IDR,  SIDE_COVER_Pin | MASTER_KEY_Pin | TOP_COVER_Pin)) != old_status_inputs) //если состояние мастер ключей было изменено
 		{			
 			old_status_inputs = status_inputs; //сохраняем состояние
 			osDelay (50); //ожидание окончание дребезга
-			if ((status_inputs = READ_BIT(GPIOE->IDR,  SIDE_COVER_Pin | MASTER_KEY_Pin | TOP_COVER_Pin)) == old_status_inputs) //если состояние мастер ключей не измененялось за 50 мс
+			if ((status_inputs = READ_BIT(MASTER_KEY_GPIO_Port->IDR,  SIDE_COVER_Pin | MASTER_KEY_Pin | TOP_COVER_Pin)) == old_status_inputs) //если состояние мастер ключей не измененялось за 50 мс
 			{
 				for (size_t count = 3; count <= 5; count++)
 				{
