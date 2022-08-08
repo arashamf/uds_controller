@@ -391,12 +391,16 @@ void Parse_HTTP_msg (void const * argument)
 							
 							case 3: //если установка времени
 								SetTime (RTC_ADDRESS,  0x0, ptr_data->RTC_setting);		
-								buf = 1;
+	//							buf = 1;
+								sprintf (http_send_buffer,"stoika=%s&result=accepted", mod_ip_adress);
+								osMessagePut (HTTP_answer_Queue, (uint32_t)http_send_buffer, 10); //передача в очередь указателя на сформированный ответ
 								break;		
 							
 							case 4: //если установка даты
-								SetTime (RTC_ADDRESS,  0x4, ptr_data->RTC_setting);	
-								buf = 1;
+								SetTime (RTC_ADDRESS,  0x4, ptr_data->RTC_setting);
+								sprintf (http_send_buffer,"stoika=%s&result=accepted", mod_ip_adress);
+								osMessagePut (HTTP_answer_Queue, (uint32_t)http_send_buffer, 10); //передача в очередь указателя на сформированный ответ
+//								buf = 1;
 								break;	
 							
 							case 5: //если установка ip-адреса 
@@ -767,7 +771,7 @@ void Ping_All_Sell (void const * argument)
 				if ((*(ptr_cell_state+2)) != 0) //если ячейка стала не активна только что
 					*(ptr_cell_state+2) = 0;
 			}
-			else //ВН�?МАН�?Е! Это костыль! инверс 2 бита (статус ригеля замка) для совместимости с программой-клиентом
+			else // Это костыль! инверс 2 бита (статус ригеля замка) для совместимости с программой-клиентом
 			{
 				if (cell_state [1] == '0') 
 					cell_state [1] = '1';
