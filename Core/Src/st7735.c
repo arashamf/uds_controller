@@ -7,11 +7,8 @@
 */
 /**************************************************************************/
 #include "st7735.h"
-#include "delay.h"	
-#include "stdio.h"
-#include "string.h"
-#include "font7x15.h"
 #include "spi.h"
+#include "gpio.h"
 
 
 const unsigned char * GlobalFont = Arial_22x23;  
@@ -381,17 +378,17 @@ void lcdSetOrientation(unsigned char orientation)
 	{
 		case 0:
 			WriteCmd(ST7735_MADCTL);  // Memory Data Access Control
-			WriteData(0x60);         
+			WriteData(0x60);         //горизонтальная ориентация 
 	    break;    
 		
 		case 1:
 			WriteCmd(ST7735_MADCTL);  // Memory Data Access Control
-			WriteData(0xC0);          // 101 - X-Y Exchange, Y-Mirror
+			WriteData(0xC0);          // вертикальная ориентация, зеркальная
 			break;
 		
 		case 2:
 			WriteCmd(ST7735_MADCTL);  // Memory Data Access Control
-			WriteData(0x00);           // 000 - Normal
+			WriteData(0x00);           // вертикальная ориентация
 			break;
 				
 		default:

@@ -142,6 +142,7 @@ int main(void)
   MX_USART3_UART_Init();
   MX_SDMMC1_SD_Init();
   MX_FATFS_Init();
+  MX_IWDG_Init();
   MX_SPI3_Init();
   MX_TIM4_Init();
   MX_SPI4_Init();
@@ -152,7 +153,7 @@ int main(void)
 	lcdInit();
 	ClearLcdMemory();
 	LCD_SetFont(Arial_15x17,black);
-	LCD_ShowString(5,10,"controller_staring...");
+	LCD_ShowString(5,10,"controller_starting...");
 	LCD_Refresh();
 	
 	ENABLE_ETHERNET; //включения ETHERNET модуля
@@ -169,7 +170,7 @@ int main(void)
 			ClearLcdMemory(); //очистим дисплея
 			LCD_SetFont(Arial_15x17,black); //установка шрифта
 			LCD_ShowString(30,10,"setting ip-adress:");		
-				if ((read_flash (FLASH_IP_ADDRESS, save_ip_adress)) == 0) //считывание из флэша пользовательский ip, если он был туда записан
+			if ((read_flash (FLASH_IP_ADDRESS, save_ip_adress)) == 0) //считывание из флэша пользовательский ip, если он был туда записан
 			{
 				save_ip_adress[0] = 192; //если нет пользовательского ip, то используется ip по умолчанию
 				save_ip_adress[1] = 168;

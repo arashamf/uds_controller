@@ -7,7 +7,9 @@
 #ifndef __ST7735_H__
 #define __ST7735_H__
 
-#include "gpio.h"   
+#include "main.h" 
+#include "stdio.h"
+#include "string.h"
 
 #define ST7735_PANEL_WIDTH  160
 #define ST7735_PANEL_HEIGHT 128
@@ -169,6 +171,10 @@ void LCD_ShowJam(void);
 #define LGRAYBLUE   0XA651 
 #define LBBLUE      0X2B12 
 
+extern const unsigned char * GlobalFont;
+extern unsigned int Paint_Color;
+extern unsigned int Back_Color;
+
 #define black 0x00
 #define blue  0x1F
 #define green 0x7E
@@ -176,10 +182,6 @@ void LCD_ShowJam(void);
 #define red   0xF8
 #define yellow 0xFE
 #define grey 0xEE
-
-extern const unsigned char * GlobalFont;
-extern unsigned int Paint_Color;
-extern unsigned int Back_Color;
 
 extern const unsigned char Arial_15x17[224*34];
 extern const unsigned char Arial_22x23[224*69];	  	// 14pt

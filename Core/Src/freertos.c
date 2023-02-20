@@ -871,7 +871,6 @@ void Сontrol_Solenoid (void const * argument)
 	osEvent event;
 	uint8_t * ptr_cell_state; //указатель на массив с сохраннёными данными от ячеек
 	signed char type_MasterKey_command;
-//	ptr_cell_state = &prev_cell_state [0][2];	
 	
 	for (;;) 
 	{
@@ -901,7 +900,6 @@ void Сontrol_Solenoid (void const * argument)
 			}						
 		}	
 		osThreadYield ();
-//		 osThreadSuspend (Task_Control_Solenoid_Handle);
 	}
 }
 
@@ -1073,7 +1071,6 @@ void ProgTimerMasterKeyCallback (void const *argument)
 	if (flag_masterkey == SOLENOIDS_ON) { //если мастер-ключ был до этого момента нажат (соленоиды включены)
 	{
 		osMessagePut(MasterKey_Command_Queue, SOLENOIDS_OFF, 5);} //передача в очередь команды на выключение всех соленоидов
-	//	osThreadResume (Task_Control_Solenoid_Handle);
 	}		
 }
 /**************************************************************************************************************************************************/
